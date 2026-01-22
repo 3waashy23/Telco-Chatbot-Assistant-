@@ -1,0 +1,1607 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Telco CX Assistant - Clean Popup Demo</title>
+  <style>
+    :root{
+      --gold:#FFD700;
+      --white:#FFFFFF;
+      --grey:#F3F4F6;
+      --grey2:#E5E7EB;
+      --text:#111827;
+      --muted:#6B7280;
+      --shadow: 0 16px 40px rgba(17,24,39,.16);
+      --shadow2: 0 10px 24px rgba(17,24,39,.14);
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+      background: linear-gradient(180deg, #ffffff 0%, #f6f7f9 100%);
+      color: var(--text);
+      min-height:100vh;
+    }
+    .page{ max-width: 900px; margin: 0 auto; padding: 18px; }
+    .hero{
+      background: var(--white);
+      border: 1px solid var(--grey2);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: 0 10px 26px rgba(17,24,39,.06);
+    }
+    .hero h1{ margin:0; font-size: 18px; font-weight: 900; }
+    .hero p{ margin: 8px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+    .overlay{
+      position: fixed;
+      inset: 0;
+      background: rgba(17,24,39,.25);
+      display:none;
+      z-index: 9998;
+    }
+    .overlay.open{ display:block; }
+
+    .launcher{
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      width: 58px;
+      height: 58px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,.10);
+      background: var(--gold);
+      box-shadow: var(--shadow2);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      user-select:none;
+      z-index: 9999;
+      transition: transform .08s ease;
+    }
+    .launcher:active{ transform: translateY(1px); }
+    .launcher svg{ width: 26px; height: 26px; }
+
+    .chatPopup{
+      position: fixed;
+      right: 16px;
+      bottom: 86px;
+      width: min(420px, calc(100vw - 32px));
+      height: min(680px, calc(100vh - 120px));
+      background: var(--white);
+      border: 1px solid var(--grey2);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display:none;
+      flex-direction: column;
+      z-index: 9999;
+    }
+    .chatPopup.open{ display:flex; }
+
+    @media (max-width: 520px){
+      .chatPopup{
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        width: auto;
+        height: min(85vh, 760px);
+        border-radius: 22px;
+      }
+    }
+
+    .header{
+      background: var(--gold);
+      border-bottom: 1px solid rgba(0,0,0,.08);
+      padding: 12px 12px 10px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+    }
+    .hLeft{ display:flex; align-items:center; gap: 10px; min-width: 0; }
+    .avatar{
+      width: 34px; height: 34px; border-radius: 12px;
+      background: rgba(255,255,255,.65);
+      border: 1px solid rgba(0,0,0,.10);
+      display:flex; align-items:center; justify-content:center;
+      flex: 0 0 auto;
+    }
+    .avatar svg{ width: 18px; height: 18px; opacity:.9; }
+    .titles{ min-width: 0; }
+    .title{
+      font-weight: 900; font-size: 13px; line-height: 1.2;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .sub{
+      font-size: 11px; color: rgba(17,24,39,.75); margin-top: 2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .hRight{ display:flex; align-items:center; gap: 6px; flex: 0 0 auto; }
+    .iconBtn{
+      width: 34px; height: 34px; border-radius: 12px;
+      border: 1px solid rgba(0,0,0,.10);
+      background: rgba(255,255,255,.65);
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; user-select:none;
+      transition: transform .08s ease;
+    }
+    .iconBtn:active{ transform: translateY(1px); }
+    .iconBtn svg{ width: 18px; height: 18px; }
+
+    .statusBar{
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--grey2);
+      background: var(--white);
+      display:flex;
+      justify-content:space-between;
+      gap: 10px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .statusBar strong{ color: var(--text); font-weight: 800; }
+
+    .messages{
+      flex: 1;
+      overflow:auto;
+      padding: 14px 12px 10px;
+      background: linear-gradient(180deg, var(--grey) 0%, #FAFAFB 100%);
+    }
+    .dayLabel{
+      margin: 8px auto 14px;
+      width: fit-content;
+      padding: 6px 10px;
+      font-size: 11px;
+      color: var(--muted);
+      background: rgba(255,255,255,.75);
+      border: 1px solid var(--grey2);
+      border-radius: 999px;
+    }
+
+    .row{ display:flex; margin: 8px 0; align-items:flex-end; gap: 6px; }
+    .row.bot{ justify-content:flex-start; }
+    .row.user{ justify-content:flex-end; }
+
+    .bubble{
+      max-width: 90%;
+      padding: 9px 10px;
+      border-radius: 16px;
+      border: 1px solid var(--grey2);
+      box-shadow: 0 8px 16px rgba(17,24,39,.06);
+      background: var(--white);
+      font-size: 13px;
+      line-height: 1.35;
+      white-space: pre-wrap;
+      word-break: break-word;
+      position: relative;
+    }
+    .row.user .bubble{
+      background: var(--gold);
+      border-color: rgba(0,0,0,.10);
+    }
+
+    .row.bot .bubble:before{
+      content:"";
+      position:absolute;
+      left:-6px;
+      bottom: 10px;
+      width: 10px; height: 10px;
+      background: var(--white);
+      border-left: 1px solid var(--grey2);
+      border-bottom: 1px solid var(--grey2);
+      transform: rotate(45deg);
+      border-bottom-left-radius: 3px;
+    }
+    .row.user .bubble:before{
+      content:"";
+      position:absolute;
+      right:-6px;
+      bottom: 10px;
+      width: 10px; height: 10px;
+      background: var(--gold);
+      border-right: 1px solid rgba(0,0,0,.10);
+      border-top: 1px solid rgba(0,0,0,.10);
+      transform: rotate(45deg);
+      border-top-right-radius: 3px;
+    }
+
+    .meta{
+      font-size: 10px;
+      color: rgba(17,24,39,.55);
+      margin-top: 6px;
+      display:flex;
+      justify-content:flex-end;
+      user-select:none;
+    }
+    .row.bot .meta{ justify-content:flex-start; }
+
+    .chips{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .chip{
+      font-size: 12px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--grey2);
+      background: rgba(255,255,255,.90);
+      cursor:pointer;
+      user-select:none;
+      transition: transform .08s ease, background .12s ease, opacity .12s ease;
+    }
+    .chip:hover{ background: #FFFBE6; }
+    .chip:active{ transform: translateY(1px); }
+    .chip.disabled{
+      opacity: .55;
+      cursor: not-allowed;
+      background: rgba(255,255,255,.7);
+    }
+    .chip.disabled:hover{ background: rgba(255,255,255,.7); }
+
+    .composer{
+      padding: 10px;
+      border-top: 1px solid var(--grey2);
+      background: var(--white);
+      display:flex;
+      gap: 8px;
+      align-items:center;
+    }
+    .inputWrap{
+      flex: 1;
+      background: var(--grey);
+      border: 1px solid var(--grey2);
+      border-radius: 999px;
+      padding: 10px 12px;
+      display:flex;
+      gap: 10px;
+      align-items:center;
+    }
+    input[type="text"]{
+      border:none;
+      outline:none;
+      background:transparent;
+      width: 100%;
+      font-size: 13px;
+      color: var(--text);
+    }
+    .send{
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,.10);
+      background: var(--gold);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      user-select:none;
+      transition: transform .08s ease;
+      flex: 0 0 auto;
+    }
+    .send:active{ transform: translateY(1px); }
+    .send svg{ width: 18px; height: 18px; }
+  </style>
+</head>
+<body>
+
+  <div class="page">
+    <div class="hero">
+      <h1>Demo Page</h1>
+      <p>Tap the gold chat button to open Telco CX Assistant.</p>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay"></div>
+
+  <div class="launcher" id="launcher" aria-label="Open chat" title="Chat">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M20 12c0 3.866-3.582 7-8 7a9.7 9.7 0 0 1-2.7-.38L5 20l1.33-3.1A6.42 6.42 0 0 1 4 12c0-3.866 3.582-7 8-7s8 3.134 8 7Z" stroke="#111827" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="M8 12h.01M12 12h.01M16 12h.01" stroke="#111827" stroke-width="2.2" stroke-linecap="round"/>
+    </svg>
+  </div>
+
+  <div class="chatPopup" id="chatPopup" role="dialog" aria-label="Chatbot">
+    <div class="header">
+      <div class="hLeft">
+        <div class="avatar" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M12 3c4.97 0 9 3.582 9 8 0 2.1-.92 4-2.44 5.45L19 21l-4.5-1.4A10.3 10.3 0 0 1 12 20c-4.97 0-9-3.582-9-8s4.03-9 9-9Z" stroke="#111827" stroke-width="1.6"/>
+          </svg>
+        </div>
+        <div class="titles">
+          <div class="title">Telco CX Assistant</div>
+          <div class="sub" id="sub">Mobile & Broadband self-services</div>
+        </div>
+      </div>
+      <div class="hRight">
+        <div class="iconBtn" id="btnReset" title="Reset">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M20 12a8 8 0 1 1-2.34-5.66" stroke="#111827" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M20 4v6h-6" stroke="#111827" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="iconBtn" id="btnClose" title="Close">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M6 6l12 12M18 6L6 18" stroke="#111827" stroke-width="1.9" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="statusBar">
+      <div>Session: <strong id="sess">Guest</strong></div>
+      <div>Verified: <strong id="ver">No</strong></div>
+    </div>
+
+    <div class="messages" id="messages">
+      <div class="dayLabel">Today</div>
+    </div>
+
+    <div class="composer">
+      <div class="inputWrap">
+        <input id="text" type="text" placeholder="Type 1, 2, 0… or a message" autocomplete="off" />
+      </div>
+      <div class="send" id="send" title="Send">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M4 12l16-8-6.5 16-2.5-6-7-2Z" stroke="#111827" stroke-width="1.8" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* =========================================================
+   CONSOLIDATED VERSION:
+   ✅ Main menu Enterprise Solutions flow restored (real flow, not placeholder)
+   ✅ Somali button inactive (disabled chip + typed "2" blocked)
+   ✅ Enhanced FAQ: categories -> question chips -> answer + action chips
+   ✅ Roaming list cleaned (no flags / no extra small labels)
+   ✅ No initial number capture stage
+   ✅ OTP verification happens ONLY at final stage for protected actions (demo code = 123456)
+   ========================================================= */
+
+const $ = (s) => document.querySelector(s);
+const popup = $("#chatPopup");
+const launcher = $("#launcher");
+const overlay = $("#overlay");
+const messagesEl = $("#messages");
+const textEl = $("#text");
+
+const state = {
+  lang: null,             // "EN" only (Somali coming soon)
+  msisdn: null,           // only collected when needed
+  otpVerified: false,
+  flow: "BOOT",
+  pending: null,
+  faqCategory: null,
+  faqQuestionId: null,
+  cache: {
+    rechargeAmount: null,
+    bundleType: null,
+    bundleOffer: null,
+    broadbandId: null,
+    entCategory: null,     // "MOBILE" | "BB"
+    entServiceId: null,    // service id
+    entServiceName: null
+  }
+};
+
+const ROAMING_PARTNERS_TEXT =
+`United Arab Emirates – Etisalat
+Saudi Arabia – Etisalat, Mobily
+Qatar – Ooredoo
+Djibouti – Djibouti Telecom
+Ethiopia – Ethio Telecom
+Kenya – Safaricom
+Egypt – Vodafone, Etisalat
+Sudan – Zain
+India – Airtel, Vodafone Idea`;
+
+const TEXT = {
+  EN: {
+    chooseLang: "Please choose language:",
+    mainWelcome: "Welcome to Mobile and Broadband Self-Services. How can I help you today?",
+    mainMenu: [
+      ["1","Mobile Services"],
+      ["2","Broadband Services"],
+      ["3","Enterprise Solutions"],
+      ["4","FAQs & Help Center"],
+      ["5","Nearest Branch / Agent"],
+      ["0","Talk to an Agent"]
+    ],
+    mobileMenu: [
+      ["1","International Recharge"],
+      ["2","Buy Bundles"],
+      ["3","Account Management"],
+      ["4","eSIM Services"],
+      ["0","Back"]
+    ],
+    rechargeAskAmount: "Enter the recharge amount (minimum $5), or choose a recommended amount:",
+    rechargeMinError: "Minimum International Recharge amount is $5. Please enter a higher amount.",
+    confirmRecharge: (amt)=>`Confirm International Recharge of $${amt}?`,
+    bundlesTypeMenu: [
+      ["1","Data"],
+      ["2","Voice"],
+      ["3","Combo"],
+      ["4","Social"],
+      ["0","Back"]
+    ],
+    bundlePickOffer: (type, lines)=>`${type} bundles:\n${lines}\n0) Back`,
+    confirmBundle: (name, vol, val, price)=>`Confirm purchase?\n${name} — ${vol} — ${val} — ${price}`,
+    bbMenu: [
+      ["1","Check due amount"],
+      ["2","Pay broadband bill"],
+      ["3","Request new broadband"],
+      ["4","Report broadband issue"],
+      ["0","Back"]
+    ],
+    bbAskId: "Please enter your Broadband ID / Account Number.",
+    bbDue: (id)=>`Broadband ID ${id}\nDue amount: $25.00\nDue date: 31/01/2026`,
+    bbPayConfirm: (id)=>`Broadband ID ${id}\nAmount due is $25.00.\nPay now?`,
+    agentAskMsisdn: "To connect you with the right support team, please enter your Somtel number, or type SKIP.",
+    agentReason: [
+      ["1","Mobile Services"],
+      ["2","Broadband Services"],
+      ["3","Enterprise Solutions"],
+      ["4","Other"]
+    ],
+    payChoose: "Select payment method:",
+    payOptions: [
+      ["1","eDahab Mobile Money"],
+      ["2","International payment link"],
+      ["0","Cancel"]
+    ],
+    payAskPin: "Enter your eDahab PIN to authorize payment.",
+    payLink: (ref)=>`Here is your secure payment link: https://example-pay.link/tx/${ref}\nAfter payment, reply PAID to continue.`,
+    payPaidHint: "Please reply PAID once payment is completed, or type MENU to cancel.",
+    payCancelled: "Payment cancelled. Type MENU to continue.",
+    payOk: (action, ref)=>`Payment confirmed. ${action} completed successfully.\nReference: TX-${ref}`,
+    pinInvalid: "Please enter a valid PIN (4–6 digits) or type CANCEL.",
+    otpNeedMsisdn: "To continue, please enter your Somtel number (starting with 62, 65, or 66).",
+    otpSent: "We’ve sent a verification code to your number. Please enter the 6-digit code to continue.",
+    otpBad: "The code is incorrect. Please try again or reply RESEND.",
+    otpResent: "A new verification code has been sent. Please enter the 6-digit code.",
+    otpCancelled: "Verification cancelled. Type MENU to continue.",
+  }
+};
+
+const BUNDLES = {
+  Data: [
+    { id:"1", name:"Daily Data Boost",  volume:"1 GB",  validity:"1 day",  price:"$1" },
+    { id:"2", name:"Weekly Data Plus",  volume:"5 GB",  validity:"7 days", price:"$4" },
+    { id:"3", name:"Monthly Data Max",  volume:"20 GB", validity:"30 days",price:"$12" }
+  ],
+  Voice: [
+    { id:"1", name:"Daily Voice Pack",  volume:"30 mins",  validity:"1 day",  price:"$1" },
+    { id:"2", name:"Weekly Voice Pack", volume:"200 mins", validity:"7 days", price:"$4" },
+    { id:"3", name:"Monthly Voice Pack",volume:"600 mins", validity:"30 days",price:"$10" }
+  ],
+  Combo: [
+    { id:"1", name:"Daily Combo",  volume:"500 MB + 20 mins",  validity:"1 day",  price:"$1" },
+    { id:"2", name:"Weekly Combo", volume:"3 GB + 100 mins",   validity:"7 days", price:"$5" },
+    { id:"3", name:"Monthly Combo",volume:"10 GB + 300 mins",  validity:"30 days",price:"$15" }
+  ],
+  Social: [
+    { id:"1", name:"Social Daily",  volume:"1 GB Social", validity:"1 day",  price:"$1" },
+    { id:"2", name:"Social Weekly", volume:"5 GB Social", validity:"7 days", price:"$4" },
+    { id:"3", name:"Social Monthly",volume:"15 GB Social",validity:"30 days",price:"$10" }
+  ]
+};
+
+const ENT = {
+  MOBILE: [
+    { id:"EM1", name:"Bulk SMS (A2P)", desc:"Enterprise messaging for OTPs, alerts, promotions, and notifications." },
+    { id:"EM2", name:"USSD Solutions", desc:"Interactive USSD menus for self-service, campaigns, and enterprise applications." },
+    { id:"EM3", name:"WhatsApp Business API", desc:"Official WhatsApp messaging platform for customer engagement and automation." },
+    { id:"EM4", name:"Corporate IVR / Call Center", desc:"IVR, routing, recording, and reporting solutions for enterprise support." },
+    { id:"EM5", name:"IoT / M2M SIM", desc:"SIM connectivity for tracking, POS terminals, smart meters, and IoT devices." },
+    { id:"EM6", name:"Corporate Plans & CUG", desc:"Enterprise packages and Closed User Group services for staff communication." },
+    { id:"EM7", name:"OTP & Sender ID Services", desc:"Secure OTP delivery and Sender ID registration services for enterprises." },
+    { id:"EM8", name:"Request Account Manager", desc:"Request a dedicated enterprise account manager for onboarding and support." }
+  ],
+  BB: [
+    { id:"EB1", name:"Fiber", desc:"High-speed dedicated or shared fiber connectivity for businesses." },
+    { id:"EB2", name:"Wireless", desc:"Wireless broadband connectivity for areas without fiber coverage." },
+    { id:"EB3", name:"Public Internet Protocol", desc:"Dedicated public IP for hosting, CCTV, servers, and remote access." },
+    { id:"EB4", name:"Point to Point", desc:"Private dedicated link connecting two business locations." },
+    { id:"EB5", name:"Multiprotocol Label Switching (MPLS)", desc:"Private WAN connecting multiple branches with traffic prioritization." },
+    { id:"EB6", name:"Virtual Local Area Network (VLAN)", desc:"Network segmentation for improved security and traffic management." },
+    { id:"EB7", name:"Information Technology Support", desc:"Managed IT support services for enterprise customers." },
+    { id:"EB8", name:"IPTV Service", desc:"TV services delivered over broadband connectivity." }
+  ]
+};
+
+const KB = {
+  categories: [
+    { key:"MOBILE",    title:"Mobile Services" },
+    { key:"BROADBAND", title:"Broadband Services" },
+    { key:"ROAMING",   title:"Roaming" },
+    { key:"VAS",       title:"VAS Services" },
+    { key:"ENT",       title:"Mobile Enterprise" },
+    { key:"PAY",       title:"Payments & Charging" },
+    { key:"TROUBLE",   title:"Troubleshooting" },
+  ],
+  questions: {
+    MOBILE: [
+      { id:"M1", q:"What is International Recharge?",
+        a:"International Recharge adds credit to your main balance for international usage.",
+        actions:[{label:"International Recharge", value:"ACT:GO_RECHARGE"}]
+      },
+      { id:"M2", q:"International Recharge validity",
+        a:"There is no expiry. Your balance remains valid as long as the number is active and in use.",
+        actions:[{label:"International Recharge", value:"ACT:GO_RECHARGE"}]
+      },
+      { id:"M3", q:"Minimum recharge amount",
+        a:"Minimum International Recharge amount starts from $5. You can choose a recommended amount or enter any amount.",
+        actions:[{label:"International Recharge", value:"ACT:GO_RECHARGE"}]
+      },
+      { id:"M4", q:"How to check balance?",
+        a:"You can check your balance through:\n- Saacid USSD\n- 999 USSD\n- Somtel SuperApp\n- Telco Chatbot / WhatsApp Assistant",
+        actions:[]
+      },
+      { id:"M5", q:"What bundles are available?",
+        a:"Available bundles: Data, Voice, Combo, and Social.",
+        actions:[{label:"Buy Bundles", value:"ACT:GO_BUNDLES"}]
+      },
+      { id:"M6", q:"Bundle coverage",
+        a:"Bundles are valid nationwide.",
+        actions:[{label:"Buy Bundles", value:"ACT:GO_BUNDLES"}]
+      },
+      { id:"M7", q:"How to buy a bundle?",
+        a:"Choose bundle type → select offer (name/volume/validity/price) → confirm → verify → pay.",
+        actions:[{label:"Buy Bundles", value:"ACT:GO_BUNDLES"}]
+      },
+      { id:"M8", q:"Account profile & IMSI",
+        a:"Account Management can show account profile type, SIM status, roaming status, and IMSI.\n\nIMSI is a unique SIM identifier used by the network to recognize your SIM profile.",
+        actions:[]
+      },
+      { id:"M9", q:"eSIM services",
+        a:"To buy an eSIM, download Somtel SuperApp:\nhttps://links.mysomtel.com/somtelapp\n\nAll QR activation steps and instructions are available inside Somtel SuperApp.",
+        actions:[]
+      }
+    ],
+    BROADBAND: [
+      { id:"B1", q:"What is Fiber broadband?",
+        a:"Fiber provides high-speed broadband through fiber infrastructure. Suitable for homes and enterprises needing stable performance.",
+        actions:[]
+      },
+      { id:"B2", q:"What is Wireless broadband?",
+        a:"Wireless broadband delivers internet over wireless connection, useful where fiber coverage is limited.",
+        actions:[]
+      },
+      { id:"B3", q:"What is Public IP?",
+        a:"Public IP is a dedicated public IP address for hosting services, remote access, CCTV, servers, and business applications.",
+        actions:[]
+      },
+      { id:"B4", q:"What is Point to Point?",
+        a:"Point to Point is a dedicated private connection between two locations (site-to-site) for reliable business connectivity.",
+        actions:[]
+      },
+      { id:"B5", q:"What is MPLS?",
+        a:"MPLS is a private WAN solution connecting multiple branches securely with traffic management and service prioritization.",
+        actions:[]
+      },
+      { id:"B6", q:"What is VLAN?",
+        a:"VLAN provides logical network segmentation to separate business traffic for better security and management.",
+        actions:[]
+      },
+      { id:"B7", q:"What is IT Support?",
+        a:"Information Technology Support provides managed IT support services for enterprise customers (maintenance, troubleshooting, managed services).",
+        actions:[]
+      },
+      { id:"B8", q:"What is IPTV?",
+        a:"IPTV is television service delivered over broadband connection, depending on service offering.",
+        actions:[]
+      },
+      { id:"B9", q:"Check broadband due amount",
+        a:"Use your Broadband ID / Account Number to view due amount and due date.",
+        actions:[{label:"Check Due", value:"ACT:BB_DUE"}]
+      },
+      { id:"B10", q:"Pay broadband bill",
+        a:"Enter Broadband ID → confirm → verify → choose payment method (eDahab PIN or international payment link).",
+        actions:[{label:"Pay Broadband", value:"ACT:BB_PAY"}]
+      }
+    ],
+    ROAMING: [
+      { id:"R1", q:"How does roaming work?",
+        a:"Roaming lets you use your voice service while outside your home network through partner operators.",
+        actions:[{label:"Countries & Partners", value:"ACT:FAQ_ANSWER:ROAMING:R2"}]
+      },
+      { id:"R2", q:"Roaming countries & partners",
+        a:`Roaming is available in the following countries with partner networks:\n\n${ROAMING_PARTNERS_TEXT}`,
+        actions:[{label:"iPhone steps", value:"ACT:FAQ_ANSWER:ROAMING:R3"},{label:"Android steps", value:"ACT:FAQ_ANSWER:ROAMING:R4"}]
+      },
+      { id:"R3", q:"How to activate roaming on iPhone",
+        a:"iPhone (iOS):\n1) Settings → Cellular\n2) Cellular Data Options → Data Roaming (turn ON if needed)\n3) Network Selection → turn off Automatic (if required) → select a partner network\n4) Restart device if network doesn’t register",
+        actions:[{label:"Roaming not working", value:"ACT:FAQ_ANSWER:ROAMING:R5"}]
+      },
+      { id:"R4", q:"How to activate roaming on Android",
+        a:"Android:\n1) Settings → Network & Internet → Mobile network\n2) Roaming (turn ON if needed)\n3) Network operators → select partner network (manual if automatic fails)\n4) Restart device if needed",
+        actions:[{label:"Roaming not working", value:"ACT:FAQ_ANSWER:ROAMING:R5"}]
+      },
+      { id:"R5", q:"Roaming not working",
+        a:"Try:\n- Confirm SIM is active\n- Turn off Airplane mode\n- Enable roaming on device\n- Manual network selection\n- Restart device\nIf still not working, talk to an agent with your current country and network name.",
+        actions:[{label:"Talk to Agent", value:"ACT:GO_AGENT"}]
+      }
+    ],
+    VAS: [
+      { id:"V1", q:"What is MCA?",
+        a:"MCA is a subscription service providing MCA features based on the offering. Charges are deducted from your main balance.",
+        actions:[]
+      },
+      { id:"V2", q:"What is CRBT?",
+        a:"CRBT (Caller Ring Back Tone) lets callers hear your selected tone/music when calling you. Charges are deducted from your main balance.",
+        actions:[]
+      },
+      { id:"V3", q:"What is Risaala?",
+        a:"Risaala is an Islamic Question & Answer service providing religious guidance and responses. Charges are deducted from your main balance based on the subscription plan.",
+        actions:[]
+      },
+      { id:"V4", q:"What is Mobile Academy?",
+        a:"Mobile Academy provides educational/learning content subscriptions charged from main balance (daily/weekly/monthly based on plan).",
+        actions:[]
+      },
+      { id:"V5", q:"What is Collect Call?",
+        a:"Collect Call allows making a call where the receiver is requested to accept and pay the call charges (based on service rules).",
+        actions:[]
+      },
+      { id:"V6", q:"What is Ads SMS?",
+        a:"Ads SMS manages promotional SMS preferences (opt-in/opt-out depending on policy).",
+        actions:[]
+      },
+      { id:"V7", q:"How are VAS charges applied?",
+        a:"If you subscribe, the amount is deducted from your Somtel number main balance.",
+        actions:[]
+      }
+    ],
+    ENT: [
+      { id:"E1", q:"Bulk SMS (A2P)", a:"Enterprise messaging for OTPs, alerts, promotions, and notifications.", actions:[{label:"Request / Order", value:"ACT:ENT_REQUEST_FAQ:Bulk SMS (A2P)"}] },
+      { id:"E2", q:"USSD Solutions", a:"Interactive USSD menus for self-service, campaigns, and enterprise applications.", actions:[{label:"Request / Order", value:"ACT:ENT_REQUEST_FAQ:USSD Solutions"}] },
+      { id:"E3", q:"WhatsApp Business API", a:"Official WhatsApp messaging platform for customer engagement and automation.", actions:[{label:"Request / Order", value:"ACT:ENT_REQUEST_FAQ:WhatsApp Business API"}] }
+    ],
+    PAY: [
+      { id:"P1", q:"Available payment methods",
+        a:"Payment methods:\n- eDahab Mobile Money (PIN)\n- International payment link",
+        actions:[]
+      },
+      { id:"P2", q:"How does eDahab PIN payment work?",
+        a:"Choose eDahab → enter your PIN to authorize the deduction and complete payment.",
+        actions:[]
+      },
+      { id:"P3", q:"How does international payment link work?",
+        a:"Choose international link → complete payment using the link → reply PAID to confirm (demo behavior).",
+        actions:[]
+      },
+      { id:"P4", q:"Payment failed / pending",
+        a:"Try again, confirm funds, or switch payment method. If the issue continues, contact an agent and share your reference if available.",
+        actions:[{label:"Talk to Agent", value:"ACT:GO_AGENT"}]
+      }
+    ],
+    TROUBLE: [
+      { id:"T1", q:"Balance not showing",
+        a:"Try Saacid USSD, 999 USSD, Somtel SuperApp, or WhatsApp Assistant. If still failing, contact an agent.",
+        actions:[{label:"Talk to Agent", value:"ACT:GO_AGENT"}]
+      },
+      { id:"T2", q:"OTP not received",
+        a:"Confirm your number is correct, check signal, retry RESEND, or contact an agent if the issue continues.",
+        actions:[{label:"Talk to Agent", value:"ACT:GO_AGENT"}]
+      },
+      { id:"T3", q:"Broadband ID error",
+        a:"Recheck the Broadband ID digits/format. If still failing, contact an agent and provide the Broadband ID.",
+        actions:[{label:"Talk to Agent", value:"ACT:GO_AGENT"}]
+      }
+    ]
+  }
+};
+
+function getPack(){ return TEXT.EN; }
+
+function nowTime(){
+  const d = new Date();
+  let h = d.getHours();
+  const m = String(d.getMinutes()).padStart(2,"0");
+  const ap = h >= 12 ? "PM" : "AM";
+  h = h % 12; if (h === 0) h = 12;
+  return `${h}:${m} ${ap}`;
+}
+function maskMsisdn(msisdn){
+  if(!msisdn) return "Guest";
+  const s = String(msisdn).replace(/\s+/g,"");
+  if (s.length <= 4) return s;
+  return s.slice(0,2) + "*****" + s.slice(-2);
+}
+function setStatus(){
+  $("#sess").textContent = state.msisdn ? maskMsisdn(state.msisdn) : "Guest";
+  $("#ver").textContent = state.otpVerified ? "Yes" : "No";
+  $("#sub").textContent = "Mobile & Broadband self-services";
+}
+function scrollBottom(){ messagesEl.scrollTop = messagesEl.scrollHeight; }
+
+function addMessage(role, text, chips=[]){
+  const row = document.createElement("div");
+  row.className = `row ${role}`;
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  bubble.textContent = text;
+
+  if (chips && chips.length){
+    const wrap = document.createElement("div");
+    wrap.className = "chips";
+    chips.forEach(c => {
+      const chip = document.createElement("div");
+      chip.className = "chip" + (c.disabled ? " disabled" : "");
+      chip.textContent = c.label;
+      if (!c.disabled){
+        chip.addEventListener("click", () => handleUser(c.value, true));
+      }
+      wrap.appendChild(chip);
+    });
+    bubble.appendChild(wrap);
+  }
+
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  meta.textContent = nowTime();
+  bubble.appendChild(meta);
+
+  row.appendChild(bubble);
+  messagesEl.appendChild(row);
+  scrollBottom();
+}
+
+function menuToChips(menuPairs){
+  return menuPairs.map(([k,_label]) => ({ label: `${k}`, value: `${k}` }));
+}
+function parseMoney(input){
+  const s = String(input).trim().replace(/\$/g,"");
+  if (!/^\d+(\.\d{1,2})?$/.test(s)) return null;
+  const n = Number(s);
+  if (!isFinite(n)) return null;
+  return Math.round(n * 100) / 100;
+}
+function isSomtelMsisdn(input){
+  const s = String(input).replace(/\s+/g,"");
+  return /^(62|65|66)\d{7}$/.test(s);
+}
+
+/* =========================
+   MENUS
+   ========================= */
+function goLanguage(){
+  state.flow = "LANG";
+  state.lang = null;
+  addMessage("bot", getPack().chooseLang, [
+    {label:"1) English", value:"1"},
+    {label:"2) Somali (coming soon)", value:"2", disabled:true}
+  ]);
+}
+function goMain(){
+  state.flow = "MAIN";
+  const pack = getPack();
+  addMessage(
+    "bot",
+    `${pack.mainWelcome}\n\n${pack.mainMenu.map(([k,l]) => `${k}) ${l}`).join("\n")}`,
+    menuToChips(pack.mainMenu)
+  );
+}
+function goMobile(){
+  state.flow = "MOBILE";
+  const pack = getPack();
+  addMessage("bot",
+    `Mobile Services — choose:\n${pack.mobileMenu.map(([k,l])=>`${k}) ${l}`).join("\n")}`,
+    menuToChips(pack.mobileMenu)
+  );
+}
+function goBroadband(){
+  state.flow = "BB";
+  const pack = getPack();
+  addMessage("bot",
+    `Broadband Services — choose:\n${pack.bbMenu.map(([k,l])=>`${k}) ${l}`).join("\n")}`,
+    menuToChips(pack.bbMenu)
+  );
+}
+function goEnterprise(){
+  state.flow = "ENT_CAT";
+  addMessage("bot",
+    "Enterprise Solutions — choose a category:",
+    [
+      {label:"1) Mobile Enterprise", value:"ENTCAT:MOBILE"},
+      {label:"2) Broadband Enterprise", value:"ENTCAT:BB"},
+      {label:"0) Back", value:"0"},
+    ]
+  );
+}
+function goEntServices(cat){
+  state.flow = "ENT_LIST";
+  state.cache.entCategory = cat;
+  state.cache.entServiceId = null;
+  state.cache.entServiceName = null;
+
+  const list = cat === "MOBILE" ? ENT.MOBILE : ENT.BB;
+  const title = cat === "MOBILE" ? "Mobile Enterprise" : "Broadband Enterprise";
+  const lines = list.map((s,i)=> `${i+1}) ${s.name}`).join("\n");
+  const chips = list.map((s,i)=> ({label:`${i+1}`, value:`ENTSVC:${cat}:${s.id}`}));
+  chips.push({label:"0", value:"0"});
+  addMessage("bot", `${title} — choose a service:\n${lines}\n0) Back`, chips);
+}
+function showEntService(cat, id){
+  state.flow = "ENT_VIEW";
+  const list = cat === "MOBILE" ? ENT.MOBILE : ENT.BB;
+  const svc = list.find(x => x.id === id);
+  if (!svc){
+    addMessage("bot","Service not found.", [{label:"Back", value:"0"}]);
+    return;
+  }
+  state.cache.entServiceId = id;
+  state.cache.entServiceName = svc.name;
+  addMessage("bot",
+    `${svc.name}\n${svc.desc}\n\nPlease choose:`,
+    [
+      {label:"Request / Order", value:"ACT:ENT_REQUEST"},
+      {label:"0) Back", value:"0"},
+      {label:"MENU", value:"MENU"},
+    ]
+  );
+}
+function goAgent(){
+  state.flow = "AGENT";
+  state.pending = { type:"AGENT_MSISDN" };
+  addMessage("bot", getPack().agentAskMsisdn, [
+    {label:"SKIP", value:"SKIP"},
+    {label:"0", value:"0"},
+    {label:"MENU", value:"MENU"},
+  ]);
+}
+function goFaqCategories(){
+  state.flow = "FAQ_CAT";
+  state.faqCategory = null;
+  state.faqQuestionId = null;
+
+  const catLines = KB.categories.map((c, i)=> `${i+1}) ${c.title}`).join("\n");
+  const chips = KB.categories.map((c, i)=> ({label:`${i+1}`, value:`FAQCAT:${c.key}`}));
+  chips.push({label:"0", value:"0"});
+  addMessage("bot", `FAQs & Help Center — choose a category:\n${catLines}\n0) Back`, chips);
+}
+function goFaqQuestions(catKey){
+  state.flow = "FAQ_Q";
+  state.faqCategory = catKey;
+  state.faqQuestionId = null;
+
+  const cat = KB.categories.find(c=>c.key===catKey);
+  const qs = (KB.questions[catKey] || []);
+  const lines = qs.map((x, idx)=> `${idx+1}) ${x.q}`).join("\n");
+  const chips = qs.map((x, idx)=> ({label:`${idx+1}`, value:`FAQQ:${catKey}:${x.id}`}));
+  chips.push({label:"0", value:"0"});
+  chips.push({label:"Back to Categories", value:"ACT:FAQ_BACK_CAT"});
+  addMessage("bot", `${cat?.title || "FAQs"} — choose a question:\n${lines}\n0) Back`, chips);
+}
+function showFaqAnswer(catKey, qId){
+  const qs = (KB.questions[catKey] || []);
+  const item = qs.find(x => x.id === qId);
+  if (!item){
+    addMessage("bot", "Question not found. Please choose again.", [{label:"Back", value:"ACT:FAQ_BACK_Q"}]);
+    return;
+  }
+  state.flow = "FAQ_A";
+  state.faqCategory = catKey;
+  state.faqQuestionId = qId;
+
+  const actions = [];
+  (item.actions || []).forEach(a => actions.push({label:a.label, value:a.value}));
+  actions.push({label:"Back", value:"ACT:FAQ_BACK_Q"});
+  actions.push({label:"MENU", value:"MENU"});
+  addMessage("bot", item.a, actions);
+}
+
+/* =========================
+   OTP (Final stage only)
+   ========================= */
+function requireOtp(purpose){
+  const pack = getPack();
+  // If already verified in this session, continue
+  if (state.otpVerified){
+    proceedAfterOtp(purpose);
+    return;
+  }
+  // If no number yet, ask for it
+  if (!isSomtelMsisdn(state.msisdn)){
+    state.pending = { type:"OTP_NEED_MSISDN", data:{ purpose } };
+    addMessage("bot", pack.otpNeedMsisdn, [
+      {label:"0", value:"0"},
+      {label:"MENU", value:"MENU"}
+    ]);
+    return;
+  }
+  // send code
+  state.pending = { type:"OTP", data:{ purpose } };
+  addMessage("bot", pack.otpSent, [
+    {label:"RESEND", value:"RESEND"},
+    {label:"CANCEL", value:"CANCEL"},
+    {label:"0", value:"0"},
+  ]);
+}
+
+function proceedAfterOtp(purpose){
+  if (purpose === "RECHARGE_PAY"){
+    startPayment(`International Recharge ($${state.cache.rechargeAmount})`);
+    return;
+  }
+  if (purpose === "BUNDLE_PAY"){
+    const o = state.cache.bundleOffer;
+    startPayment(`Bundle purchase (${o.name} — ${o.volume} — ${o.validity} — ${o.price})`);
+    return;
+  }
+  if (purpose === "BB_PAY"){
+    startPayment(`Broadband bill payment (ID: ${state.cache.broadbandId})`);
+    return;
+  }
+  addMessage("bot","Done.", [{label:"MENU", value:"MENU"}]);
+}
+
+/* =========================
+   PAYMENT (shared)
+   ========================= */
+function startPayment(actionName){
+  const pack = getPack();
+  state.pending = { type:"PAY_METHOD", data:{ actionName } };
+  addMessage("bot",
+    `${pack.payChoose}\n\n${pack.payOptions.map(([k,l])=>`${k}) ${l}`).join("\n")}`,
+    menuToChips(pack.payOptions)
+  );
+}
+function handlePaymentMethod(choice){
+  const pack = getPack();
+  const actionName = state.pending?.data?.actionName || "Transaction";
+
+  if (choice === "0"){
+    state.pending = null;
+    addMessage("bot", pack.payCancelled, [{label:"MENU", value:"MENU"}]);
+    return;
+  }
+  if (choice === "1"){
+    state.pending = { type:"EDAHAB_PIN", data:{ actionName } };
+    addMessage("bot", pack.payAskPin, [
+      {label:"CANCEL", value:"CANCEL"},
+      {label:"MENU", value:"MENU"},
+    ]);
+    return;
+  }
+  if (choice === "2"){
+    const ref = Math.floor(Math.random()*900000+100000);
+    state.pending = { type:"WAIT_PAID", data:{ actionName, ref } };
+    addMessage("bot", pack.payLink(ref), [
+      {label:"PAID", value:"PAID"},
+      {label:"MENU", value:"MENU"},
+    ]);
+    return;
+  }
+  addMessage("bot", "Please choose 1, 2, or 0.", menuToChips(pack.payOptions));
+}
+function handlePaid(input){
+  const pack = getPack();
+  const upper = String(input).trim().toUpperCase();
+  const { actionName, ref } = state.pending.data;
+
+  if (upper !== "PAID"){
+    addMessage("bot", pack.payPaidHint, [
+      {label:"PAID", value:"PAID"},
+      {label:"MENU", value:"MENU"},
+    ]);
+    return;
+  }
+  state.pending = null;
+  addMessage("bot", pack.payOk(actionName, ref), [{label:"MENU", value:"MENU"}]);
+}
+function handlePin(pin){
+  const pack = getPack();
+  const upper = String(pin).trim().toUpperCase();
+  if (upper === "CANCEL"){
+    state.pending = null;
+    addMessage("bot", pack.payCancelled, [{label:"MENU", value:"MENU"}]);
+    return;
+  }
+  if (!/^\d{4,6}$/.test(String(pin).trim())){
+    addMessage("bot", pack.pinInvalid, [
+      {label:"CANCEL", value:"CANCEL"},
+      {label:"MENU", value:"MENU"},
+    ]);
+    return;
+  }
+  const actionName = state.pending.data.actionName;
+  const ref = Math.floor(Math.random()*900000+100000);
+  state.pending = null;
+  addMessage("bot", pack.payOk(actionName, ref), [{label:"MENU", value:"MENU"}]);
+}
+
+/* =========================
+   MOBILE FLOWS
+   ========================= */
+function goRecharge(){
+  state.flow = "RECHARGE";
+  state.cache.rechargeAmount = null;
+  const pack = getPack();
+  addMessage("bot", pack.rechargeAskAmount, [
+    {label:"$5", value:"5"},
+    {label:"$10", value:"10"},
+    {label:"$20", value:"20"},
+    {label:"$50", value:"50"},
+    {label:"Other", value:"OTHER"},
+    {label:"0", value:"0"},
+  ]);
+}
+function confirmRecharge(amount){
+  state.cache.rechargeAmount = amount;
+  state.flow = "RECHARGE_CONFIRM";
+  const pack = getPack();
+  addMessage("bot", pack.confirmRecharge(amount), [
+    {label:"YES", value:"YES"},
+    {label:"NO", value:"NO"},
+    {label:"0", value:"0"},
+  ]);
+}
+
+function goBundlesType(){
+  state.flow = "BUNDLE_TYPE";
+  const pack = getPack();
+  addMessage("bot",
+    `Buy Bundles — choose:\n${pack.bundlesTypeMenu.map(([k,l])=>`${k}) ${l}`).join("\n")}`,
+    menuToChips(pack.bundlesTypeMenu)
+  );
+}
+function goBundlesList(type){
+  state.flow = "BUNDLE_LIST";
+  state.cache.bundleType = type;
+  const pack = getPack();
+  const offers = BUNDLES[type] || [];
+  const lines = offers.map(o => `${o.id}) ${o.name} — ${o.volume} — ${o.validity} — ${o.price}`).join("\n");
+  addMessage("bot", pack.bundlePickOffer(type, lines), [
+    ...offers.map(o => ({label:o.id, value:o.id})),
+    {label:"0", value:"0"},
+  ]);
+}
+function confirmBundle(offer){
+  state.flow = "BUNDLE_CONFIRM";
+  state.cache.bundleOffer = offer;
+  const pack = getPack();
+  addMessage("bot", pack.confirmBundle(offer.name, offer.volume, offer.validity, offer.price), [
+    {label:"YES", value:"YES"},
+    {label:"NO", value:"NO"},
+    {label:"0", value:"0"},
+  ]);
+}
+
+/* =========================
+   BROADBAND
+   ========================= */
+function askBroadbandId(action){
+  state.pending = { type:"BB_ID", data:{ action } };
+  addMessage("bot", getPack().bbAskId, [
+    {label:"0", value:"0"},
+    {label:"MENU", value:"MENU"},
+  ]);
+}
+
+/* =========================
+   ENTERPRISE LEAD FORM (after service selection)
+   ========================= */
+function startEntLead(serviceName){
+  state.pending = {
+    type:"ENT_LEAD",
+    data:{
+      serviceName,
+      step:0,
+      fields:{ company:"", contact:"", phone:"", email:"", location:"", notes:"" }
+    }
+  };
+  addMessage("bot",
+    `Request / Order — ${serviceName}\n\nPlease enter your Company name:`,
+    [{label:"MENU", value:"MENU"},{label:"CANCEL", value:"CANCEL"}]
+  );
+}
+function handleEntLead(input){
+  const upper = String(input).trim().toUpperCase();
+  if (upper === "CANCEL"){
+    state.pending = null;
+    addMessage("bot","Request cancelled. Type MENU to continue.", [{label:"MENU", value:"MENU"}]);
+    return;
+  }
+  const p = state.pending.data;
+  const f = p.fields;
+
+  const steps = [
+    { key:"company",  prompt:"Please enter Contact person name:" },
+    { key:"contact",  prompt:"Please enter Contact phone number:" },
+    { key:"phone",    prompt:"Please enter Contact email:" },
+    { key:"email",    prompt:"Please enter Location (city/district):" },
+    { key:"location", prompt:"Any notes? (or type SKIP)" },
+    { key:"notes",    prompt:null }
+  ];
+
+  const cur = steps[p.step];
+  if (!cur){ return; }
+
+  if (cur.key === "notes" && upper === "SKIP"){
+    f.notes = "";
+  } else {
+    f[cur.key] = String(input).trim();
+  }
+
+  p.step += 1;
+  const next = steps[p.step];
+
+  if (!next){
+    const ref = Math.floor(Math.random()*90000+10000);
+    const summary =
+`Request submitted ✅
+Service: ${p.serviceName}
+Company: ${f.company}
+Contact: ${f.contact}
+Phone: ${f.phone}
+Email: ${f.email}
+Location: ${f.location}${f.notes ? `\nNotes: ${f.notes}` : ""}
+
+Reference: ENT-${ref}`;
+    state.pending = null;
+    addMessage("bot", summary, [
+      {label:"Talk to Agent", value:"ACT:GO_AGENT"},
+      {label:"MENU", value:"MENU"}
+    ]);
+    return;
+  }
+
+  addMessage("bot", next.prompt, [{label:"MENU", value:"MENU"},{label:"CANCEL", value:"CANCEL"}]);
+}
+
+/* =========================
+   RESET
+   ========================= */
+function resetChat(){
+  messagesEl.innerHTML = '<div class="dayLabel">Today</div>';
+  state.lang = null;
+  state.msisdn = null;
+  state.otpVerified = false;
+  state.flow = "BOOT";
+  state.pending = null;
+  state.faqCategory = null;
+  state.faqQuestionId = null;
+  state.cache = {
+    rechargeAmount:null, bundleType:null, bundleOffer:null, broadbandId:null,
+    entCategory:null, entServiceId:null, entServiceName:null
+  };
+  setStatus();
+  addMessage("bot", "Hi 👋\nWelcome to Mobile and Broadband Self-Services. How can I help you today?");
+  goLanguage();
+}
+
+/* =========================
+   ACTION ROUTER
+   ========================= */
+function handleAction(token){
+  if (token === "ACT:GO_RECHARGE"){ goMobile(); goRecharge(); return true; }
+  if (token === "ACT:GO_BUNDLES"){ goMobile(); goBundlesType(); return true; }
+  if (token === "ACT:GO_AGENT"){ goAgent(); return true; }
+  if (token === "ACT:FAQ_BACK_CAT"){ goFaqCategories(); return true; }
+  if (token === "ACT:FAQ_BACK_Q"){
+    if (state.faqCategory) goFaqQuestions(state.faqCategory);
+    else goFaqCategories();
+    return true;
+  }
+  if (token === "ACT:BB_DUE"){ goBroadband(); askBroadbandId("DUE"); return true; }
+  if (token === "ACT:BB_PAY"){ goBroadband(); askBroadbandId("PAY"); return true; }
+  if (token === "ACT:ENT_REQUEST"){
+    const svc = state.cache.entServiceName || "Enterprise Service";
+    startEntLead(svc);
+    return true;
+  }
+  if (token.startsWith("ACT:ENT_REQUEST_FAQ:")){
+    const svcName = token.split(":").slice(2).join(":").trim();
+    startEntLead(svcName || "Enterprise Service");
+    return true;
+  }
+  if (token.startsWith("ACT:FAQ_ANSWER:")){
+    const parts = token.split(":"); // ACT:FAQ_ANSWER:<CAT>:<QID>
+    const cat = parts[2];
+    const qid = parts[3];
+    if (cat && qid){
+      showFaqAnswer(cat, qid);
+      return true;
+    }
+  }
+  return false;
+}
+
+/* =========================
+   INPUT HANDLER
+   ========================= */
+function handleUser(raw, fromChip=false){
+  const input = String(raw ?? "").trim();
+  if (!input) return;
+  const upper = input.toUpperCase();
+  if (!fromChip) addMessage("user", input);
+
+  if (upper === "MENU"){ goMain(); return; }
+
+  // actions from chips
+  if (input.startsWith("ACT:")){
+    if (handleAction(input)) return;
+  }
+
+  const pack = getPack();
+
+  // OTP stages
+  if (state.pending?.type === "OTP_NEED_MSISDN"){
+    if (upper === "0"){ state.pending=null; addMessage("bot","Cancelled. Type MENU to continue.", [{label:"MENU", value:"MENU"}]); return; }
+    if (!isSomtelMsisdn(input)){
+      addMessage("bot","Please enter a valid Somtel number (62/65/66 + 7 digits).", [
+        {label:"0", value:"0"},
+        {label:"MENU", value:"MENU"}
+      ]);
+      return;
+    }
+    state.msisdn = input.replace(/\s+/g,"");
+    state.otpVerified = false;
+    setStatus();
+    const purpose = state.pending.data.purpose;
+    state.pending = { type:"OTP", data:{ purpose } };
+    addMessage("bot", pack.otpSent, [
+      {label:"RESEND", value:"RESEND"},
+      {label:"CANCEL", value:"CANCEL"},
+      {label:"0", value:"0"},
+    ]);
+    return;
+  }
+  if (state.pending?.type === "OTP"){
+    if (upper === "0"){ state.pending=null; addMessage("bot", pack.otpCancelled, [{label:"MENU", value:"MENU"}]); return; }
+    if (upper === "RESEND"){ addMessage("bot", pack.otpResent, [{label:"CANCEL", value:"CANCEL"},{label:"0", value:"0"}]); return; }
+    if (upper === "CANCEL"){ state.pending=null; addMessage("bot", pack.otpCancelled, [{label:"MENU", value:"MENU"}]); return; }
+
+    if (/^\d{6}$/.test(input) && input === "123456"){
+      const purpose = state.pending.data.purpose;
+      state.pending = null;
+      state.otpVerified = true;
+      setStatus();
+      addMessage("bot", "Verified ✅", [{label:"Continue", value:"ACT:OTP_CONT"} ,{label:"MENU", value:"MENU"}]);
+      proceedAfterOtp(purpose);
+      return;
+    }
+    addMessage("bot", pack.otpBad, [{label:"RESEND", value:"RESEND"},{label:"CANCEL", value:"CANCEL"}]);
+    return;
+  }
+
+  // Payments
+  if (state.pending?.type === "PAY_METHOD"){ handlePaymentMethod(input); return; }
+  if (state.pending?.type === "WAIT_PAID"){ handlePaid(input); return; }
+  if (state.pending?.type === "EDAHAB_PIN"){ handlePin(input); return; }
+
+  // Enterprise lead
+  if (state.pending?.type === "ENT_LEAD"){
+    if (upper === "MENU"){ addMessage("bot","Please finish the request or type CANCEL.", [{label:"CANCEL", value:"CANCEL"}]); return; }
+    handleEntLead(input);
+    return;
+  }
+
+  // Broadband pending
+  if (state.pending?.type === "BB_ID"){
+    if (upper === "0"){ state.pending=null; goBroadband(); return; }
+    const id = input.replace(/\s+/g,"");
+    const action = state.pending.data.action;
+    state.pending = null;
+
+    if (action === "DUE"){
+      addMessage("bot", pack.bbDue(id), [{label:"MENU", value:"MENU"},{label:"0", value:"0"}]);
+      return;
+    }
+    if (action === "PAY"){
+      state.cache.broadbandId = id;
+      addMessage("bot", pack.bbPayConfirm(id), [
+        {label:"YES", value:"YES"},
+        {label:"NO", value:"NO"},
+        {label:"0", value:"0"},
+      ]);
+      state.pending = { type:"BB_PAY_CONFIRM", data:{ id } };
+      return;
+    }
+    if (action === "ISSUE"){
+      const ref = Math.floor(Math.random()*90000+10000);
+      addMessage("bot", `Ticket created.\nReference: BB-${ref}`, [{label:"MENU", value:"MENU"}]);
+      return;
+    }
+  }
+  if (state.pending?.type === "BB_PAY_CONFIRM"){
+    if (upper === "0"){ state.pending=null; askBroadbandId("PAY"); return; }
+    if (upper === "NO"){ state.pending=null; state.cache.broadbandId=null; addMessage("bot","Payment cancelled.", [{label:"MENU", value:"MENU"}]); return; }
+    if (upper !== "YES"){ addMessage("bot","Please reply YES or NO.", [{label:"YES", value:"YES"},{label:"NO", value:"NO"}]); return; }
+    state.pending = null;
+    requireOtp("BB_PAY");
+    return;
+  }
+
+  // Agent flow
+  if (state.pending?.type === "AGENT_MSISDN"){
+    if (upper === "0"){ state.pending=null; goMain(); return; }
+    // keep number if entered; allow SKIP
+    if (upper !== "SKIP") state.msisdn = input.replace(/\s+/g,"");
+    setStatus();
+    state.pending = { type:"AGENT_REASON" };
+    addMessage("bot",
+      `Please select the reason:\n${pack.agentReason.map(([k,l])=>`${k}) ${l}`).join("\n")}`,
+      menuToChips(pack.agentReason).concat([{label:"MENU", value:"MENU"}])
+    );
+    return;
+  }
+  if (state.pending?.type === "AGENT_REASON"){
+    if (upper === "MENU"){ state.pending=null; goMain(); return; }
+    state.pending = { type:"AGENT_DESC" };
+    addMessage("bot","Please briefly describe your issue.", [{label:"MENU", value:"MENU"}]);
+    return;
+  }
+  if (state.pending?.type === "AGENT_DESC"){
+    if (upper === "MENU"){ state.pending=null; goMain(); return; }
+    const ref = Math.floor(Math.random()*90000+10000);
+    state.pending = null;
+    addMessage("bot", `Connecting you to an agent now.\nReference: CASE-${ref}`, [{label:"MENU", value:"MENU"}]);
+    return;
+  }
+
+  // Language
+  if (state.flow === "LANG"){
+    if (input === "1"){
+      state.lang = "EN";
+      setStatus();
+      goMain();
+      return;
+    }
+    if (input === "2"){
+      addMessage("bot", "Somali menu is coming soon. Please select English for now.", [
+        {label:"1) English", value:"1"},
+        {label:"2) Somali (coming soon)", value:"2", disabled:true}
+      ]);
+      return;
+    }
+    addMessage("bot", pack.chooseLang, [
+      {label:"1) English", value:"1"},
+      {label:"2) Somali (coming soon)", value:"2", disabled:true}
+    ]);
+    return;
+  }
+
+  // Main menu
+  if (state.flow === "MAIN"){
+    if (input === "1"){ goMobile(); return; }
+    if (input === "2"){ goBroadband(); return; }
+    if (input === "3"){ goEnterprise(); return; }
+    if (input === "4"){ goFaqCategories(); return; }
+    if (input === "5"){
+      state.flow = "BRANCH";
+      addMessage("bot","Please type your district/city or share a location pin 📍", [{label:"MENU", value:"MENU"},{label:"0", value:"0"}]);
+      return;
+    }
+    if (input === "0"){ goAgent(); return; }
+    addMessage("bot","Please choose a valid option.", menuToChips(pack.mainMenu));
+    return;
+  }
+
+  // Branch
+  if (state.flow === "BRANCH"){
+    if (upper === "0"){ goMain(); return; }
+    addMessage("bot", `Thanks. (Demo) We will show nearest branches for: ${input}`, [{label:"MENU", value:"MENU"},{label:"0", value:"0"}]);
+    return;
+  }
+
+  // Mobile menu
+  if (state.flow === "MOBILE"){
+    if (input === "0"){ goMain(); return; }
+    if (input === "1"){ goRecharge(); return; }
+    if (input === "2"){ goBundlesType(); return; }
+    if (input === "3"){
+      addMessage("bot","Account Management knowledge is available in FAQs → Mobile Services.", [
+        {label:"Open FAQs", value:"ACT:FAQ_BACK_CAT"},
+        {label:"MENU", value:"MENU"}
+      ]);
+      return;
+    }
+    if (input === "4"){
+      addMessage("bot",
+        "To buy an eSIM, please download Somtel SuperApp using this link:\nhttps://links.mysomtel.com/somtelapp\n\nAll QR activation steps and instructions are available inside Somtel SuperApp.",
+        [{label:"MENU", value:"MENU"},{label:"0", value:"0"}]
+      );
+      return;
+    }
+    addMessage("bot","Please choose a valid option.", menuToChips(pack.mobileMenu));
+    return;
+  }
+
+  // Recharge
+  if (state.flow === "RECHARGE"){
+    if (upper === "0"){ goMobile(); return; }
+    if (upper === "OTHER"){
+      state.pending = { type:"RECHARGE_MANUAL" };
+      addMessage("bot", "Enter amount in USD (minimum $5).", [{label:"0", value:"0"},{label:"MENU", value:"MENU"}]);
+      return;
+    }
+    const amt = parseMoney(input);
+    if (amt === null){
+      addMessage("bot", pack.rechargeAskAmount, [
+        {label:"$5", value:"5"},
+        {label:"$10", value:"10"},
+        {label:"$20", value:"20"},
+        {label:"$50", value:"50"},
+        {label:"Other", value:"OTHER"},
+        {label:"0", value:"0"},
+      ]);
+      return;
+    }
+    if (amt < 5){
+      addMessage("bot", pack.rechargeMinError, [
+        {label:"$5", value:"5"},
+        {label:"$10", value:"10"},
+        {label:"Other", value:"OTHER"},
+        {label:"0", value:"0"},
+      ]);
+      return;
+    }
+    confirmRecharge(amt);
+    return;
+  }
+  if (state.pending?.type === "RECHARGE_MANUAL"){
+    if (upper === "0"){ state.pending=null; goRecharge(); return; }
+    const amt = parseMoney(input);
+    if (amt === null || amt < 5){
+      addMessage("bot", "Please enter a valid amount (minimum $5).", [{label:"0", value:"0"},{label:"MENU", value:"MENU"}]);
+      return;
+    }
+    state.pending = null;
+    confirmRecharge(amt);
+    return;
+  }
+  if (state.flow === "RECHARGE_CONFIRM"){
+    if (upper === "0"){ goRecharge(); return; }
+    if (upper === "NO"){ state.cache.rechargeAmount=null; addMessage("bot","Cancelled.", [{label:"MENU", value:"MENU"}]); goMobile(); return; }
+    if (upper !== "YES"){ addMessage("bot","Please reply YES or NO.", [{label:"YES", value:"YES"},{label:"NO", value:"NO"}]); return; }
+    requireOtp("RECHARGE_PAY");
+    return;
+  }
+
+  // Bundles
+  if (state.flow === "BUNDLE_TYPE"){
+    if (input === "0"){ goMobile(); return; }
+    const map = {"1":"Data","2":"Voice","3":"Combo","4":"Social"};
+    if (!map[input]){ addMessage("bot","Please choose 1–4 or 0.", menuToChips(pack.bundlesTypeMenu)); return; }
+    goBundlesList(map[input]);
+    return;
+  }
+  if (state.flow === "BUNDLE_LIST"){
+    if (input === "0"){ goBundlesType(); return; }
+    const type = state.cache.bundleType;
+    const offers = BUNDLES[type] || [];
+    const offer = offers.find(o => o.id === input);
+    if (!offer){
+      addMessage("bot","Please choose a valid offer.", offers.map(o=>({label:o.id,value:o.id})).concat([{label:"0", value:"0"}]));
+      return;
+    }
+    confirmBundle(offer);
+    return;
+  }
+  if (state.flow === "BUNDLE_CONFIRM"){
+    if (upper === "0"){ goBundlesList(state.cache.bundleType); return; }
+    if (upper === "NO"){ state.cache.bundleOffer=null; addMessage("bot","Cancelled.", [{label:"MENU", value:"MENU"}]); goMobile(); return; }
+    if (upper !== "YES"){ addMessage("bot","Please reply YES or NO.", [{label:"YES", value:"YES"},{label:"NO", value:"NO"}]); return; }
+    requireOtp("BUNDLE_PAY");
+    return;
+  }
+
+  // Broadband
+  if (state.flow === "BB"){
+    if (input === "0"){ goMain(); return; }
+    if (input === "1"){ askBroadbandId("DUE"); return; }
+    if (input === "2"){ askBroadbandId("PAY"); return; }
+    if (input === "3"){
+      addMessage("bot","New broadband request (demo). Please share: Full name, location, contact number, and preferred broadband type.", [
+        {label:"Talk to Agent", value:"ACT:GO_AGENT"},
+        {label:"MENU", value:"MENU"}
+      ]);
+      return;
+    }
+    if (input === "4"){ askBroadbandId("ISSUE"); return; }
+    addMessage("bot","Please choose a valid option.", menuToChips(pack.bbMenu));
+    return;
+  }
+
+  // Enterprise flows
+  if (state.flow === "ENT_CAT"){
+    if (upper === "0"){ goMain(); return; }
+    if (input === "ENTCAT:MOBILE"){ goEntServices("MOBILE"); return; }
+    if (input === "ENTCAT:BB"){ goEntServices("BB"); return; }
+    addMessage("bot","Please choose 1, 2, or 0.", [
+      {label:"1) Mobile Enterprise", value:"ENTCAT:MOBILE"},
+      {label:"2) Broadband Enterprise", value:"ENTCAT:BB"},
+      {label:"0) Back", value:"0"},
+    ]);
+    return;
+  }
+  if (state.flow === "ENT_LIST"){
+    if (upper === "0"){ goEnterprise(); return; }
+    if (input.startsWith("ENTSVC:")){
+      const parts = input.split(":"); // ENTSVC:<CAT>:<ID>
+      showEntService(parts[1], parts[2]);
+      return;
+    }
+    addMessage("bot","Please select a service.", [{label:"0", value:"0"},{label:"MENU", value:"MENU"}]);
+    return;
+  }
+  if (state.flow === "ENT_VIEW"){
+    if (upper === "0"){ goEntServices(state.cache.entCategory); return; }
+    addMessage("bot","Use the buttons below, or type MENU.", [
+      {label:"Request / Order", value:"ACT:ENT_REQUEST"},
+      {label:"0) Back", value:"0"},
+      {label:"MENU", value:"MENU"}
+    ]);
+    return;
+  }
+
+  // FAQ flows
+  if (state.flow === "FAQ_CAT"){
+    if (upper === "0"){ goMain(); return; }
+    if (input.startsWith("FAQCAT:")){
+      goFaqQuestions(input.split(":")[1]);
+      return;
+    }
+    addMessage("bot","Please select a category.", [{label:"0", value:"0"}]);
+    return;
+  }
+  if (state.flow === "FAQ_Q"){
+    if (upper === "0"){ goFaqCategories(); return; }
+    if (input.startsWith("FAQQ:")){
+      const parts = input.split(":"); // FAQQ:<CAT>:<QID>
+      showFaqAnswer(parts[1], parts[2]);
+      return;
+    }
+    addMessage("bot","Please select a question.", [{label:"0", value:"0"},{label:"Back to Categories", value:"ACT:FAQ_BACK_CAT"}]);
+    return;
+  }
+  if (state.flow === "FAQ_A"){
+    addMessage("bot","Use the buttons below, or type MENU.", [{label:"Back", value:"ACT:FAQ_BACK_Q"},{label:"MENU", value:"MENU"}]);
+    return;
+  }
+
+  addMessage("bot","Type MENU to continue.", [{label:"MENU", value:"MENU"}]);
+}
+
+/* ===== UI behavior ===== */
+function openChat(){
+  popup.classList.add("open");
+  overlay.classList.add("open");
+  setTimeout(() => textEl.focus(), 50);
+}
+function closeChat(){
+  popup.classList.remove("open");
+  overlay.classList.remove("open");
+}
+launcher.addEventListener("click", () => {
+  if (popup.classList.contains("open")) closeChat();
+  else openChat();
+});
+overlay.addEventListener("click", closeChat);
+$("#btnClose").addEventListener("click", closeChat);
+$("#btnReset").addEventListener("click", () => resetChat());
+
+$("#send").addEventListener("click", () => {
+  const v = textEl.value;
+  textEl.value = "";
+  handleUser(v);
+});
+textEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter"){ e.preventDefault(); $("#send").click(); }
+});
+
+/* Start */
+setStatus();
+resetChat();
+</script>
+
+</body>
+</html>
